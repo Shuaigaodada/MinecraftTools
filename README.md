@@ -1,4 +1,4 @@
-# MincreaftTools
+# MinecraftTools
 一个MC工具包，用于快速远程开启服务器和在本地开启服务器进行联机
 
 # 服务器功能
