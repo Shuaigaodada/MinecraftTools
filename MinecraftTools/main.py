@@ -4,8 +4,8 @@ from java import Java
 
 import os
 import sys
-import time
 import configparser
+from loguru import logger
 from paramiko.ssh_exception import SSHException
 
 if getattr(sys, 'frozen', False):
@@ -21,6 +21,8 @@ if not config.sections():
     Server.create_file()
     print("已生成配置文件，请修改配置文件后再次运行文件")
     exit(0)
+Server.create_file()
+
 
 hosts = config.get("Server", "hosts")
 port = config.getint("Server", "port")
@@ -60,24 +62,45 @@ print("Key: %s" % key)
 print("Minecraft Version: %s" % MC_VERSION)
 print("Forge Version: %s" % Forge_VERSION)
 
+logger.info("正在连接服务器...")
 server = Server( hosts, port, key )
 try:
     server.connect(user, password)
 except SSHException:
     print("连接失败, 是否缺少密钥文件或是密码错误")
     exit(1)
+except TimeoutError:
+    print("连接失败, 服务器连接超时")
+    exit(1)
+    
+
+logger.info("连接成功")
 
 server.MC_VERSION = MC_VERSION
 server.MC_PATH = server.basepath + "\\" + f"forge_{MC_VERSION}_server"
 
+def check(cmd: str) -> None:
+    if cmd == "taskkill -all":
+        _, stdout, _ = server.send("tasklist")
+        kills_task_pid = []
+        output = stdout.read().decode()
+        for task in output.splitlines():
+            if "cmd.exe" in task:
+                kills_task_pid.append(task.split()[1])
+        print(kills_task_pid)
+        for pid in kills_task_pid:
+            server.send(f"taskkill /F /PID {pid}")
+            print(f"已结束进程: {pid}")
 
 try:
     while True:
         print("1. 初始化服务器")
         print("2. 启动服务器")
-        print("3. 退出")
+        print("3. 关闭服务器")
+        print("4. 退出")
         try:
             choose = input("请输入选择: ")
+            check(choose)
             choose = int(choose)
         except ValueError:
             print("输入错误")
@@ -108,22 +131,24 @@ try:
             forge_path = Forge.download( version )
             
             Java.send( pack )
+            server.reconnect()
             Forge.install(forge_path)
+            server.reconnect()
             print("初始化完成")
         elif choose == 2:
-            stdin, stdout, stderr = server.exec(f"cd /d {server.MC_PATH} && .\\run.bat")
-            while True:
-                cmd = input(">>> ")
-                if cmd == "exit":
-                    stdin.close()
-                    stdout.close()
-                    stderr.close()
-                    break
-                stdin.write(cmd + "\n")
-                stdin.flush()
-                print()
+            if not server.check():
+                server.run()
+                logger.info("服务器启动成功")
+            else:
+                logger.info("服务器已经启动")
+            exit()
                 
         elif choose == 3:
+            server.kill_server()
+            logger.info("服务器已关闭")
+            break
+        
+        elif choose == 4:
             break
 finally:
     server.close()

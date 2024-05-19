@@ -3,6 +3,7 @@ import os
 import sys
 import json
 import tqdm
+import time
 import paramiko
 import threading
 from typing import Tuple, Optional, List, Union, Callable, Any
@@ -94,21 +95,33 @@ class Server:
         self.__username: str = None
         self.__password: str = None
             
-    def connect( self, usr_name: str, pw: str ) -> None:
+    def connect( self, usr_name: str, pw: str, timeout: float=5, retry: int = 3 ) -> None:
         self.__username = usr_name
         self.__password = pw
-        self.ssh.connect(
-            self.hosts,
-            self.port,
-            self.__username,
-            self.__password,
-            key_filename=self.key_file
-        )
+        while True:
+            try:
+                self.ssh.connect(
+                    self.hosts,
+                    self.port,
+                    self.__username,
+                    self.__password,
+                    key_filename=self.key_file,
+                    timeout=timeout
+                )
+            except TimeoutError:
+                logger.error(language["timeout_error"].format(retry))
+                retry -= 1
+                if retry <= 0:
+                    logger.error("连接失败")
+                    raise TimeoutError("连接失败")
+                continue
+            break
+        
     
-    def join( self, *__path: str ) -> None:
+    def join( self, *__path: str ) -> str:
         path = self.MC_PATH
         for p in __path:
-            path += f"\\{p}"
+            path += "\\" + p
         return path
         
     
@@ -172,6 +185,11 @@ class Server:
 
         return stdin, stdout, stderr
 
+    def exists( self, *__path: Tuple[str] ) -> bool:
+        path = self.join(*__path)
+        _, stdout, _ = self.send(f"if exist {path} (echo 0) else (echo 1)")
+        return stdout.read().decode() == "0"
+
     def exec( self, cmd: str ) -> Tuple[paramiko.ChannelFile, paramiko.ChannelFile, paramiko.ChannelFile]:
         stdin, stdout, stderr = self.ssh.exec_command(cmd, get_pty=True)
         def __ouput():
@@ -184,7 +202,19 @@ class Server:
         threading.Thread(target=__ouput).start()
         return stdin, stdout, stderr
     
-    def run(self, breakout: CommandType = None) -> Tuple[paramiko.ChannelFile, paramiko.ChannelFile, paramiko.ChannelFile]:
+    def run( self ) -> None:
+        if not self.exists("call-run.bat"):
+            with open(os.path.join(BASEPATH, "prefile", "call-run.bat"), "r") as fp:
+                cmd = fp.read()
+            cmd = cmd.replace("MC_PATH", self.MC_PATH)
+            print(cmd)
+            with open(os.path.join(BASEPATH, "cache", "call-run.bat"), "w") as fp:
+                fp.write(cmd)
+            self.upload(os.path.join(BASEPATH, "cache", "call-run.bat"), self.join("call-run.bat"))
+        self.send(f"cd /d {self.MC_PATH} && .\call-run.bat")
+        
+        
+    def client_run(self, breakout: CommandType = None) -> Tuple[paramiko.ChannelFile, paramiko.ChannelFile, paramiko.ChannelFile]:
         logger.info(language["run_server"].format(self.hosts, self.properties.server_port))
         return self.send(f"cd /d {self.MC_PATH} && .\\run.bat", breakout=breakout)
         
@@ -201,3 +231,31 @@ class Server:
         mods = os.listdir(os.path.join(BASEPATH, "mods"))
         for mod in mods:
             self.upload(os.path.join(BASEPATH, "mods", mod), self.join("mods", mod))
+
+    def exec_command( self, cmd: str ) -> Tuple[paramiko.ChannelFile, paramiko.ChannelFile, paramiko.ChannelFile]:
+        command = \
+            f'start /B cmd /c "{cmd}" > output.txt 2>&1'
+        return self.exec(command)
+
+    def check(self) -> bool:
+        cmd = f"netstat -ano | findstr :{self.properties.server_port}"
+        _, stdout, _ = self.ssh.exec_command(cmd)
+        output = stdout.read().decode()
+        return str(self.properties.server_port) in output
+    
+    def kill_server(self) -> None:
+        cmd = f"netstat -ano | findstr :{self.properties.server_port}"
+        _, stdout, _ = self.ssh.exec_command(cmd)
+        output = stdout.read().decode()
+        pid = None
+        for line in output.splitlines():
+            if str(self.properties.server_port) in line:
+                pid = line.split()[-1]
+                break
+        
+        if pid is not None:
+            logger.info(f"find pid: {pid}")
+            cmd = f"taskkill /F /PID {pid}"
+            self.ssh.exec_command(cmd)
+        return
+    

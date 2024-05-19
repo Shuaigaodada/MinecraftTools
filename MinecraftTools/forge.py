@@ -106,13 +106,13 @@ f"https://maven.minecraftforge.net/net/minecraftforge/forge/{mc_ver}-{forge_ver}
         command = \
             f"cmd /c \"cd /d {server.MC_PATH} && \"{JAVA_PATH}\" -jar \"{FORGE_PATH}\" -installServer\""
         print(command)
-        for i in range(10):
-            logger.info(language["waiting_buff_java"].format(10 - i))
+        for i in range(5):
+            logger.info(language["waiting_buff_java"].format(5 - i))
             time.sleep(1)
         server.send( command )
         print()
-        for i in range(10):
-            logger.info(language["waiting_buff_forge"].format(10 - i))
+        for i in range(5):
+            logger.info(language["waiting_buff_forge"].format(5 - i))
             time.sleep(1)
         logger.info(language["send_success"].format(command))
         
@@ -136,7 +136,7 @@ f"https://maven.minecraftforge.net/net/minecraftforge/forge/{mc_ver}-{forge_ver}
             
         logger.info(language["replace_run_bat"].format( os.path.join(base_path, "prefile", run_name) ))
         server.upload( new_run_bat, server.join("run.bat") )
-        server.run(breakout=("You need to agree to the EULA in order", "Y\n")) # first run, create all file
+        server.client_run(breakout=("You need to agree to the EULA in order", "Y\n")) # first run, create all file
 
         
         # upload eula.txt
@@ -144,7 +144,7 @@ f"https://maven.minecraftforge.net/net/minecraftforge/forge/{mc_ver}-{forge_ver}
         logger.info(language["uploading"].format("eula.txt"))
         server.upload( eula_path, server.join("eula.txt") )
         logger.info(language["upload_success"].format("eula.txt"))
-        server.run(breakout=(("Successfully init", (server.reconnect, )), ("Done", (server.reconnect, ))))
+        server.client_run(breakout=(("Successfully init", (server.reconnect, )), ("Done", (server.reconnect, ))))
         logger.info(language["install_success"].format("Forge"))
 
     def all_version( mc_version: str ) -> Tuple[str]:

@@ -103,6 +103,7 @@ cn_language = {
     "load_config": "正在加载配置文件 {0}",
     "load_config_success": "加载配置文件成功 {0}",
     "install_success": "安装 {0} 成功！",
+    "timeout_error": "连接超时，请检查网络连接或是服务器是否开启SSH服务，正在重试连接...({0})"
 }
 
 language = cn_language
