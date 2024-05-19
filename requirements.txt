@@ -1,6 +1,0 @@
-paramiko
-requests
-bs4
-fake_headers
-lxml
-chardet
