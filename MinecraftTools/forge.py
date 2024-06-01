@@ -106,6 +106,7 @@ f"https://maven.minecraftforge.net/net/minecraftforge/forge/{mc_ver}-{forge_ver}
         command = \
             f"cmd /c \"cd /d {server.MC_PATH} && \"{JAVA_PATH}\" -jar \"{FORGE_PATH}\" -installServer\""
         print(command)
+<<<<<<< HEAD
         for i in range(5):
             logger.info(language["waiting_buff_java"].format(5 - i))
             time.sleep(1)
@@ -113,6 +114,15 @@ f"https://maven.minecraftforge.net/net/minecraftforge/forge/{mc_ver}-{forge_ver}
         print()
         for i in range(5):
             logger.info(language["waiting_buff_forge"].format(5 - i))
+=======
+        for i in range(10):
+            logger.info(language["waiting_buff_java"].format(10 - i))
+            time.sleep(1)
+        server.send( command )
+        print()
+        for i in range(10):
+            logger.info(language["waiting_buff_forge"].format(10 - i))
+>>>>>>> da1dd93 (v1.0)
             time.sleep(1)
         logger.info(language["send_success"].format(command))
         
@@ -136,7 +146,11 @@ f"https://maven.minecraftforge.net/net/minecraftforge/forge/{mc_ver}-{forge_ver}
             
         logger.info(language["replace_run_bat"].format( os.path.join(base_path, "prefile", run_name) ))
         server.upload( new_run_bat, server.join("run.bat") )
+<<<<<<< HEAD
         server.client_run(breakout=("You need to agree to the EULA in order", "Y\n")) # first run, create all file
+=======
+        server.run(breakout=("You need to agree to the EULA in order", "Y\n")) # first run, create all file
+>>>>>>> da1dd93 (v1.0)
 
         
         # upload eula.txt
@@ -144,7 +158,11 @@ f"https://maven.minecraftforge.net/net/minecraftforge/forge/{mc_ver}-{forge_ver}
         logger.info(language["uploading"].format("eula.txt"))
         server.upload( eula_path, server.join("eula.txt") )
         logger.info(language["upload_success"].format("eula.txt"))
+<<<<<<< HEAD
         server.client_run(breakout=(("Successfully init", (server.reconnect, )), ("Done", (server.reconnect, ))))
+=======
+        server.run(breakout=(("Successfully init", (server.reconnect, )), ("Done", (server.reconnect, ))))
+>>>>>>> da1dd93 (v1.0)
         logger.info(language["install_success"].format("Forge"))
 
     def all_version( mc_version: str ) -> Tuple[str]:

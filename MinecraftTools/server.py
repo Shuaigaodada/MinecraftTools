@@ -3,7 +3,10 @@ import os
 import sys
 import json
 import tqdm
+<<<<<<< HEAD
 import time
+=======
+>>>>>>> da1dd93 (v1.0)
 import paramiko
 import threading
 from typing import Tuple, Optional, List, Union, Callable, Any
@@ -95,6 +98,7 @@ class Server:
         self.__username: str = None
         self.__password: str = None
             
+<<<<<<< HEAD
     def connect( self, usr_name: str, pw: str, timeout: float=5, retry: int = 3 ) -> None:
         self.__username = usr_name
         self.__password = pw
@@ -122,6 +126,23 @@ class Server:
         path = self.MC_PATH
         for p in __path:
             path += "\\" + p
+=======
+    def connect( self, usr_name: str, pw: str ) -> None:
+        self.__username = usr_name
+        self.__password = pw
+        self.ssh.connect(
+            self.hosts,
+            self.port,
+            self.__username,
+            self.__password,
+            key_filename=self.key_file
+        )
+    
+    def join( self, *__path: str ) -> None:
+        path = self.MC_PATH
+        for p in __path:
+            path += f"\\{p}"
+>>>>>>> da1dd93 (v1.0)
         return path
         
     
@@ -185,11 +206,14 @@ class Server:
 
         return stdin, stdout, stderr
 
+<<<<<<< HEAD
     def exists( self, *__path: Tuple[str] ) -> bool:
         path = self.join(*__path)
         _, stdout, _ = self.send(f"if exist {path} (echo 0) else (echo 1)")
         return stdout.read().decode() == "0"
 
+=======
+>>>>>>> da1dd93 (v1.0)
     def exec( self, cmd: str ) -> Tuple[paramiko.ChannelFile, paramiko.ChannelFile, paramiko.ChannelFile]:
         stdin, stdout, stderr = self.ssh.exec_command(cmd, get_pty=True)
         def __ouput():
@@ -202,6 +226,7 @@ class Server:
         threading.Thread(target=__ouput).start()
         return stdin, stdout, stderr
     
+<<<<<<< HEAD
     def run( self ) -> None:
         if not self.exists("call-run.bat"):
             with open(os.path.join(BASEPATH, "prefile", "call-run.bat"), "r") as fp:
@@ -215,6 +240,9 @@ class Server:
         
         
     def client_run(self, breakout: CommandType = None) -> Tuple[paramiko.ChannelFile, paramiko.ChannelFile, paramiko.ChannelFile]:
+=======
+    def run(self, breakout: CommandType = None) -> Tuple[paramiko.ChannelFile, paramiko.ChannelFile, paramiko.ChannelFile]:
+>>>>>>> da1dd93 (v1.0)
         logger.info(language["run_server"].format(self.hosts, self.properties.server_port))
         return self.send(f"cd /d {self.MC_PATH} && .\\run.bat", breakout=breakout)
         
@@ -231,6 +259,7 @@ class Server:
         mods = os.listdir(os.path.join(BASEPATH, "mods"))
         for mod in mods:
             self.upload(os.path.join(BASEPATH, "mods", mod), self.join("mods", mod))
+<<<<<<< HEAD
 
     def exec_command( self, cmd: str ) -> Tuple[paramiko.ChannelFile, paramiko.ChannelFile, paramiko.ChannelFile]:
         command = \
@@ -259,3 +288,5 @@ class Server:
             self.ssh.exec_command(cmd)
         return
     
+=======
+>>>>>>> da1dd93 (v1.0)
