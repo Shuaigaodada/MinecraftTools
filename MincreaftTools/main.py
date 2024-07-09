@@ -24,7 +24,7 @@ def create_server():
         key=KEY
     )
     server.connect(USER, PASSWORD)
-    serverSERVER_NAME = NAME
+    server.SERVER_NAME = NAME
     logger.info("连接成功")
     
     try:
