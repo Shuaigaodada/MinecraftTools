@@ -1,0 +1,5 @@
+cython
+pyinstaller
+requests
+bs4
+lxml
