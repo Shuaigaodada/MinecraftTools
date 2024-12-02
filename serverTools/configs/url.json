@@ -1,0 +1,14 @@
+{
+    "8": {
+        "url": "https://builds.openlogic.com/downloadJDK/openlogic-openjdk/8u412-b08/openlogic-openjdk-8u412-b08-windows-x64.zip",
+        "name": "openlogic-openjdk-8u412-b08-windows-64"
+    },
+    "16": {
+        "url": "https://download.java.net/openjdk/jdk16/ri/openjdk-16+36_windows-x64_bin.zip",
+        "name": "jdk-16"
+    },
+    "17": {
+        "url": "https://download.java.net/openjdk/jdk17/ri/openjdk-17+35_windows-x64_bin.zip",
+        "name": "jdk-17"
+    }
+}

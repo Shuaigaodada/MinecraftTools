@@ -1,3 +1,3 @@
 @echo off
-cd /d MC_PATH
+cd /d SERVER_PATH
 start .\run.bat
