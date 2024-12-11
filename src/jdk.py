@@ -2,6 +2,7 @@ import os
 import json
 import zipfile
 import requests
+from loguru import logger
 from typing import Dict, Optional, Iterable
 
 class JDK:
@@ -10,6 +11,8 @@ class JDK:
         with open("configs/url.json", "r") as f:
             self.url_mapping: Dict[str, str] = json.load(f)
         self.auto_set(minecraft_version)
+        
+        self.path = None
     
     def auto_set(self, minecraft_version: str) -> None:
         """自动获取适合MC版本的JDK版本, 并将JDK.version设置为合适的版本
@@ -17,6 +20,7 @@ class JDK:
         Args:
             minecraft_version: 我的世界版本
         """
+        logger.info(f"自动获取适合MC版本的JDK版本, 当前MC版本: {minecraft_version}")
         vers = int(minecraft_version.split(".")[1])
         if vers < 17:
             self.version = "8"
@@ -25,7 +29,7 @@ class JDK:
         else:
             self.version = "17"
 
-    def download(self, path: str, chunk_size: int = 1024) -> Iterable[tuple[int, int]]:
+    def download(self, path: str, chunk_size: int = 102400) -> Iterable[tuple[int, int]]:
         """下载JDK
         
         参数:
@@ -46,10 +50,13 @@ class JDK:
                     # 返回下载进度
                     yield total_size, downloaded
             
+            logger.info("下载完成，正在解压")
             with zipfile.ZipFile(f"{path}/jdk-{self.version}.zip", "r") as zip_ref:
                 zip_ref.extractall(f"{path}")
+            logger.info("解压完成 删除zip文件")
             # 删除zip文件    
             os.remove(f"{path}/jdk-{self.version}.zip")
+            self.path = f"{path}/jdk-{self.version}"
 
 
 if __name__ == "__main__":

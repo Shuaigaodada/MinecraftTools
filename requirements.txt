@@ -3,3 +3,4 @@ pyinstaller
 requests
 bs4
 lxml
+loguru
