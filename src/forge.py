@@ -1,7 +1,10 @@
+import os
 import requests
 from loguru import logger
 from bs4 import BeautifulSoup, Tag
 from typing import Tuple, Optional, Iterable
+
+basepath = os.path.join(os.path.dirname(os.path.dirname(__file__)), "server")
 
 class Forge:
     URL_FORMAT = "https://maven.minecraftforge.net/net/minecraftforge/forge/{0}-{1}/forge-{2}-{3}-installer.jar"
@@ -10,7 +13,7 @@ class Forge:
     
     def __init__(self, tag: Tag, minecraft_version: str) -> None:
         self.__tag = tag
-        self.__minecraft_version = minecraft_version
+        self.minecraft_version = minecraft_version
         self.path = None
         
     @property
@@ -20,9 +23,9 @@ class Forge:
     @property
     def url(self) -> str:
         logger.info("生成下载链接")
-        return Forge.format(self.__minecraft_version, self.version)
+        return Forge.format(self.minecraft_version, self.version)
     
-    def download(self, path: str, chunk_size: int = 102400) -> Iterable[tuple[int, int]]:
+    def download(self, chunk_size: int = 102400) -> Iterable[tuple[int, int]]:
         """下载Forge
         参数:
             path: 下载路径
@@ -35,14 +38,14 @@ class Forge:
             r.raise_for_status()
             total_size = int(r.headers.get("Content-Length", 0))
             downloaded = 0
-            with open(f"{path}/forge-{self.version}.jar", "wb") as f:
+            with open(f"{basepath}/forge-{self.version}.jar", "wb") as f:
                 for chunk in r.iter_content(chunk_size=chunk_size):
                     f.write(chunk)
                     downloaded += len(chunk)
                     # 返回下载进度
                     yield total_size, downloaded
-        logger.info(f"下载完成, 保存路径: {path}/forge-{self.version}.jar")
-        self.path = f"{path}/forge-{self.version}.jar"
+        logger.info(f"下载完成, 保存路径: {basepath}/forge-{self.version}.jar")
+        self.path = f"{basepath}/forge-{self.version}.jar"
     
     
 class ForgeVersion:
@@ -92,6 +95,7 @@ class ForgeVersion:
         if recommended is not None:
             return self.request_version(recommended.parent.find("small").text.split(" - ")[1])
         else:
+            logger.error("未找到推荐版本")
             return None
         
 if __name__ == "__main__":

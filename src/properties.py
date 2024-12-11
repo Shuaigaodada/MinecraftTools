@@ -1,3 +1,4 @@
+import os
 import json
 
 class Properties:
@@ -193,5 +194,5 @@ class Properties:
             config += f"{attr}={val}\n"
 
         config = config[:-1]
-        with open(path, "w") as fp:
+        with open(os.path.join(path, "server.properties"), "w") as fp:
             fp.write(config)
