@@ -74,48 +74,36 @@ class Server:
         
     
     def init(self):
-        """初始化服务端
-        """
+        """初始化服务端"""
         logger.info("初始化服务端")
         bat_file_path = os.path.join(self.server_path, "run.bat")
         process = subprocess.Popen([
             bat_file_path
         ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, cwd=self.server_path)
         
-        for line in iter(process.stdout.readline, ''):
-            if line:
-                yield line.strip()
-                if "Done" in line:
-                    process.terminate()
-                    process.wait()  # 等待进程完全退出
-                    logger.info("服务端初始化完成 杀死进程")
-                    break
-        
-        process.stdout.close()
-        process.wait()
-    
+        try:
+            for line in iter(process.stdout.readline, ''):
+                if line:
+                    yield line.strip()
+                    if "Done" in line:
+                        logger.info("服务端初始化完成，终止进程")
+                        process.terminate()
+                        process.wait(timeout=10)  # 等待进程完全退出
+                        break
+        except Exception as e:
+            logger.error(f"发生错误: {e}")
+        finally:
+            if process.poll() is None:
+                logger.info("强制终止进程")
+                process.kill()
+            process.stdout.close()
+            process.stderr.close()
+            process.wait()  # 确保进程已完全退出
 
 if __name__ == "__main__":
     logger.info("开始执行程序")
     _forge = forge.ForgeVersion("1.13.2").latest
     _jdk = jdk.JDK("1.13.2")
-    
-    for total, chunk in _forge.download():
-        print(f"{chunk}/{total}")
-    
-    for total, chunk in _jdk.download():
-        print(f"{chunk}/{total}")
-    
     server = Server(_jdk, _forge)
-    
-    for output in server.install():
-        print(output)
-    server.replace()
     for output in server.init():
         print(output)
-    from properties import Properties
-    properties = Properties()
-    properties.difficulty = "hard"
-    properties.level_name = "myserver"
-    properties.save(server.server_path)
-    logger.info("程序执行完毕")
