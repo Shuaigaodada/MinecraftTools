@@ -33,6 +33,10 @@ class Forge:
         返回:
             迭代器，每次返回下载进度[总大小, 本次下载大小]
         """
+        if os.path.exists(f"{basepath}/{self.minecraft_version}/{self.version}"):
+            logger.info(f"Forge {self.version} 已下载")
+            self.path = f"{basepath}/{self.minecraft_version}/{self.version}"
+            return
         logger.info(f"下载Forge: {self.version}")
         with requests.get(self.url, stream=True) as r:
             r.raise_for_status()

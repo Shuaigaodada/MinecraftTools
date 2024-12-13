@@ -1,32 +1,51 @@
 import os
 import jdk
+import sys
 import forge
-import signal
-import subprocess
 import platform
+import properties
+import subprocess
 from loguru import logger
 
-prefab = os.path.join(os.path.dirname(os.path.dirname(__file__)), "prefabs")
-basepath = os.path.join(os.path.dirname(os.path.dirname(__file__)), "server")
+def get_resource_path(relative_path):
+    """获取资源文件的绝对路径"""
+    try:
+        # PyInstaller 创建临时文件夹，并将路径存储在 _MEIPASS 中
+        base_path = sys._MEIPASS
+    except AttributeError:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
+prefab = get_resource_path("prefabs")
+basepath = get_resource_path("server")
+srcpath = get_resource_path("src")
 logger.info(f"执行 mkdir -p {basepath}")
 # 创建目录
 os.makedirs(basepath, exist_ok=True)
+
+def kill_process_on_port(port):
+    # 查找占用端口的进程 ID
+    result = subprocess.run(f'netstat -ano | findstr :{port}', shell=True, capture_output=True, text=True)
+    if result.stdout:
+        # 提取进程 ID
+        lines = result.stdout.strip().split('\n')
+        for line in lines:
+            parts = line.split()
+            pid = parts[-1]
+            # 终止进程
+            subprocess.run(f'taskkill /PID {pid} /F', shell=True)
+            logger.info(f"已终止占用端口 {port} 的进程，PID: {pid}")
+    else:
+        logger.info(f"没有找到占用端口 {port} 的进程")
 
 class Server:
     def __init__(self, jdk: jdk.JDK, forge: forge.Forge):
         self.jdk = jdk
         self.forge = forge
-        if self.jdk.path is None:
-            print("请先下载JDK")
-            return
-        if self.forge.path is None:
-            print("请先下载Forge")
-            return
-        java_executable = "java.exe" if platform.system() == "Windows" else "java"
-        self.java_path = os.path.join(self.jdk.path, "bin", java_executable)
-        self.server_path = os.path.join(basepath, self.forge.minecraft_version, self.forge.version)
+        self.properties = properties.Properties()
+        self.path = None
     
-
     def install(self):
         """安装服务端"""
         if not os.path.exists(os.path.join(basepath, self.forge.minecraft_version)):
@@ -34,7 +53,10 @@ class Server:
         if not os.path.exists(os.path.join(basepath, self.forge.minecraft_version, self.forge.version)):
             os.makedirs(os.path.join(basepath, self.forge.minecraft_version, self.forge.version))
         
-        self.server_path = os.path.join(basepath, self.forge.minecraft_version, self.forge.version)
+        java_executable = "java.exe" if platform.system() == "Windows" else "java"
+        self.java_path = os.path.join(self.jdk.path, "bin", java_executable)
+        
+        self.path = os.path.join(basepath, self.forge.minecraft_version, self.forge.version)
         
         logger.info(f"执行 {self.java_path} -jar {self.forge.path} --installServer")
         try:
@@ -43,7 +65,7 @@ class Server:
                 "-jar",
                 self.forge.path,
                 "--installServer"
-            ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, cwd=self.server_path)
+            ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, cwd=self.path)
         except FileNotFoundError:
             print(self.forge.path)
             print(self.java_path)
@@ -58,28 +80,31 @@ class Server:
 
     def replace(self):
         """替换服务端文件"""
-        bat_prefab = os.path.join(prefab, "run.bat") if os.path.exists(os.path.join(self.server_path, "run.bat")) else os.path.join(prefab, "1.13-run.bat")
+        _, ver, _ = self.forge.minecraft_version.split(".")
+        if int(ver) <= 13:
+            bat_prefab = os.path.join(prefab, "1.13-run.bat")
+        else:
+            bat_prefab = os.path.join(prefab, "run.bat")
+        
         with open(bat_prefab, "r") as f:
             content = f.read()
-        content = content.replace("JAVA_PATH", self.java_path).replace("FORGE_PATH", os.path.join(self.server_path, f"forge-{self.forge.minecraft_version}-{self.forge.version}.jar"))
-        with open(os.path.join(self.server_path, "run.bat"), "w") as f:
+        content = content.replace("JAVA_PATH", self.java_path).replace("FORGE_PATH", os.path.join(self.path, f"forge-{self.forge.minecraft_version}-{self.forge.version}.jar"))
+        with open(os.path.join(self.path, "run.bat"), "w") as f:
             f.write(content)
             
         with open(os.path.join(prefab, "eula.txt"), "r") as f:
             content = f.read()
-        with open(os.path.join(self.server_path, "eula.txt"), "w") as f:
+        with open(os.path.join(self.path, "eula.txt"), "w") as f:
             f.write(content)
-        
-        
-        
     
     def init(self):
         """初始化服务端"""
         logger.info("初始化服务端")
-        bat_file_path = os.path.join(self.server_path, "run.bat")
+        self.properties.save(self.path)
+        bat_file_path = os.path.join(self.path, "run.bat")
         process = subprocess.Popen([
             bat_file_path
-        ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, cwd=self.server_path)
+        ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, cwd=self.path)
         
         try:
             for line in iter(process.stdout.readline, ''):
@@ -90,6 +115,7 @@ class Server:
                         process.terminate()
                         process.wait(timeout=10)  # 等待进程完全退出
                         break
+            subprocess.run(["python", os.path.join(srcpath, "firewall.py"), str(self.properties.server_port)], check=True)
         except Exception as e:
             logger.error(f"发生错误: {e}")
         finally:
@@ -99,11 +125,29 @@ class Server:
             process.stdout.close()
             process.stderr.close()
             process.wait()  # 确保进程已完全退出
+            kill_process_on_port(self.properties.server_port)
+            logger.info("线程已退出")
+            
+    def run(self) -> None:
+        """运行服务端"""
+        pass
 
 if __name__ == "__main__":
     logger.info("开始执行程序")
     _forge = forge.ForgeVersion("1.13.2").latest
     _jdk = jdk.JDK("1.13.2")
     server = Server(_jdk, _forge)
+    
+    for total, chunk in _forge.download():
+        pass
+
+    for total, chunk in _jdk.download():
+        pass
+    
+    for output in server.install():
+        logger.info(output)
+        
+    server.replace()
+    
     for output in server.init():
-        print(output)
+        logger.info(output)

@@ -1,5 +1,6 @@
 import os
 import json
+import time
 import zipfile
 import requests
 from loguru import logger
@@ -32,6 +33,14 @@ class JDK:
         else:
             self.version = "17"
 
+    def is_downloaded(self) -> bool:
+        """检查JDK是否已经下载
+        
+        Returns:
+            bool: 是否已经下载
+        """
+        return os.path.exists(f"{basepath}/jdk-{self.version}")
+    
     def download(self, chunk_size: int = 102400) -> Iterable[tuple[int, int]]:
         """下载JDK
         
@@ -41,6 +50,10 @@ class JDK:
         返回:
             迭代器，每次返回下载进度[总大小, 本次下载大小]
         """
+        if self.is_downloaded():
+            logger.info("JDK已下载")
+            self.path = f"{basepath}/jdk-{self.version}"
+            return
         url = self.url_mapping[self.version]["url"]
         with requests.get(url, stream=True) as r:
             r.raise_for_status()
@@ -80,7 +93,8 @@ class JDK:
                             logger.error(f"没有写权限: {src}")
                         if not os.access(dst, os.W_OK):
                             logger.error(f"没有写权限: {dst}")
-                        raise e
+                        time.sleep(1)
+                        os.rename(src, dst)
                     
             self.path = f"{basepath}/jdk-{self.version}"
 
