@@ -1,28 +1,17 @@
 import os
 import jdk
-import sys
+import path
 import forge
 import platform
 import properties
 import subprocess
 from loguru import logger
 
-def get_resource_path(relative_path):
-    """获取资源文件的绝对路径"""
-    try:
-        # PyInstaller 创建临时文件夹，并将路径存储在 _MEIPASS 中
-        base_path = sys._MEIPASS
-    except AttributeError:
-        base_path = os.path.abspath(".")
 
-    return os.path.join(base_path, relative_path)
 
-prefab = get_resource_path("prefabs")
-basepath = get_resource_path("server")
-srcpath = get_resource_path("src")
-logger.info(f"执行 mkdir -p {basepath}")
+logger.info(f"执行 mkdir -p {path.server}")
 # 创建目录
-os.makedirs(basepath, exist_ok=True)
+os.makedirs(path.server, exist_ok=True)
 
 def kill_process_on_port(port):
     # 查找占用端口的进程 ID
@@ -48,15 +37,15 @@ class Server:
     
     def install(self):
         """安装服务端"""
-        if not os.path.exists(os.path.join(basepath, self.forge.minecraft_version)):
-            os.makedirs(os.path.join(basepath, self.forge.minecraft_version))
-        if not os.path.exists(os.path.join(basepath, self.forge.minecraft_version, self.forge.version)):
-            os.makedirs(os.path.join(basepath, self.forge.minecraft_version, self.forge.version))
+        if not os.path.exists(os.path.join(path.server, self.forge.minecraft_version)):
+            os.makedirs(os.path.join(path.server, self.forge.minecraft_version))
+        if not os.path.exists(os.path.join(path.server, self.forge.minecraft_version, self.forge.version)):
+            os.makedirs(os.path.join(path.server, self.forge.minecraft_version, self.forge.version))
         
         java_executable = "java.exe" if platform.system() == "Windows" else "java"
         self.java_path = os.path.join(self.jdk.path, "bin", java_executable)
         
-        self.path = os.path.join(basepath, self.forge.minecraft_version, self.forge.version)
+        self.path = os.path.join(path.server, self.forge.minecraft_version, self.forge.version)
         
         logger.info(f"执行 {self.java_path} -jar {self.forge.path} --installServer")
         try:
@@ -82,9 +71,9 @@ class Server:
         """替换服务端文件"""
         _, ver, _ = self.forge.minecraft_version.split(".")
         if int(ver) <= 13:
-            bat_prefab = os.path.join(prefab, "1.13-run.bat")
+            bat_prefab = os.path.join(path.prefabs, "1.13-run.bat")
         else:
-            bat_prefab = os.path.join(prefab, "run.bat")
+            bat_prefab = os.path.join(path.prefabs, "run.bat")
         
         with open(bat_prefab, "r") as f:
             content = f.read()
@@ -92,7 +81,7 @@ class Server:
         with open(os.path.join(self.path, "run.bat"), "w") as f:
             f.write(content)
             
-        with open(os.path.join(prefab, "eula.txt"), "r") as f:
+        with open(os.path.join(path.prefabs, "eula.txt"), "r") as f:
             content = f.read()
         with open(os.path.join(self.path, "eula.txt"), "w") as f:
             f.write(content)
@@ -115,7 +104,7 @@ class Server:
                         process.terminate()
                         process.wait(timeout=10)  # 等待进程完全退出
                         break
-            subprocess.run(["python", os.path.join(srcpath, "firewall.py"), str(self.properties.server_port)], check=True)
+            subprocess.run(["python", os.path.join(path.src, "firewall.py"), str(self.properties.server_port)], check=True)
         except Exception as e:
             logger.error(f"发生错误: {e}")
         finally:

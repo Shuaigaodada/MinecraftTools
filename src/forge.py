@@ -1,10 +1,9 @@
 import os
+import path
 import requests
 from loguru import logger
 from bs4 import BeautifulSoup, Tag
 from typing import Tuple, Optional, Iterable
-
-basepath = os.path.join(os.path.dirname(os.path.dirname(__file__)), "server")
 
 class Forge:
     URL_FORMAT = "https://maven.minecraftforge.net/net/minecraftforge/forge/{0}-{1}/forge-{2}-{3}-installer.jar"
@@ -18,7 +17,6 @@ class Forge:
         
     @property
     def version(self) -> str:
-        logger.info("查找td标签, class=download-version")
         return self.__tag.find("td", class_="download-version").text.strip()
     @property
     def url(self) -> str:
@@ -33,23 +31,21 @@ class Forge:
         返回:
             迭代器，每次返回下载进度[总大小, 本次下载大小]
         """
-        if os.path.exists(f"{basepath}/{self.minecraft_version}/{self.version}"):
+        if os.path.exists(f"{path.server}/{self.minecraft_version}/{self.version}"):
             logger.info(f"Forge {self.version} 已下载")
-            self.path = f"{basepath}/{self.minecraft_version}/{self.version}"
+            self.path = f"{path.server}/{self.minecraft_version}/{self.version}"
             return
-        logger.info(f"下载Forge: {self.version}")
         with requests.get(self.url, stream=True) as r:
             r.raise_for_status()
             total_size = int(r.headers.get("Content-Length", 0))
             downloaded = 0
-            with open(f"{basepath}/forge-{self.version}.jar", "wb") as f:
+            with open(f"{path.server}/forge-{self.version}.jar", "wb") as f:
                 for chunk in r.iter_content(chunk_size=chunk_size):
                     f.write(chunk)
                     downloaded += len(chunk)
                     # 返回下载进度
                     yield total_size, downloaded
-        logger.info(f"下载完成, 保存路径: {basepath}/forge-{self.version}.jar")
-        self.path = f"{basepath}/forge-{self.version}.jar"
+        self.path = f"{path.server}/forge-{self.version}.jar"
     
     
 class ForgeVersion:
