@@ -7,6 +7,7 @@ from typing import Tuple, Optional, Iterable
 
 class Forge:
     URL_FORMAT = "https://maven.minecraftforge.net/net/minecraftforge/forge/{0}-{1}/forge-{2}-{3}-installer.jar"
+    @staticmethod
     def format(minecraft_version: str, version: str) -> str:
         return Forge.URL_FORMAT.format(minecraft_version, version, minecraft_version, version)
     
@@ -20,7 +21,7 @@ class Forge:
         return self.__tag.find("td", class_="download-version").text.strip()
     @property
     def url(self) -> str:
-        logger.info("生成下载链接")
+        # logger.info("生成下载链接")
         return Forge.format(self.minecraft_version, self.version)
     
     def download(self, chunk_size: int = 102400) -> Iterable[tuple[int, int]]:
@@ -32,7 +33,7 @@ class Forge:
             迭代器，每次返回下载进度[总大小, 本次下载大小]
         """
         if os.path.exists(f"{path.server}/{self.minecraft_version}/{self.version}"):
-            logger.info(f"Forge {self.version} 已下载")
+            # logger.info(f"Forge {self.version} 已下载")
             self.path = f"{path.server}/{self.minecraft_version}/{self.version}"
             return
         with requests.get(self.url, stream=True) as r:
@@ -59,14 +60,11 @@ class ForgeVersion:
 
         url = f"https://files.minecraftforge.net/net/minecraftforge/forge/index_{self.mc_version}.html"
         
-        logger.info(f"请求: {url}")
         response = requests.get(url)
         response.encoding = response.apparent_encoding
         response.raise_for_status()
         
-        logger.info(f"请求成功, 状态码: {response.status_code}")
         self.__soup = BeautifulSoup(response.text, "lxml")
-        logger.info("解析成功, 使用lxml解析器")
     
     def all_versions(self) -> Tuple[Forge, ...]:
         self.__request()
@@ -75,6 +73,24 @@ class ForgeVersion:
             versions.append(Forge(ver, self.mc_version))
         return tuple(versions)
     
+    @staticmethod
+    def all_minecraft_versions() -> Tuple[str, ...]:
+        url = "https://files.minecraftforge.net/net/minecraftforge/forge/"
+        response = requests.get(url)
+        soup = BeautifulSoup(response.text, "lxml")
+
+        parents = soup.find_all("ul", class_="nav-collapsible")
+
+        versions = []
+        for parent in parents:
+            children = parent.find_all("li")
+            
+            for child in children:
+                child_text = child.find("a")
+                if child_text != None:
+                    versions.append(child_text.text)
+        return versions
+            
     def request_version(self, version: str) -> Forge:
         self.__request()
         for ver in self.__soup.find("tbody").find_all("tr"):
@@ -95,11 +111,12 @@ class ForgeVersion:
         if recommended is not None:
             return self.request_version(recommended.parent.find("small").text.split(" - ")[1])
         else:
-            logger.error("未找到推荐版本")
+            # logger.error("未找到推荐版本")
             return None
         
 if __name__ == "__main__":
-    forge = ForgeVersion("1.20.1")
-    for total, chunk in forge.recommended.download(".", 102400):
-        print(f"{chunk}/{total}")
-    print(forge.recommended.version)
+    # forge = ForgeVersion("1.20.1")
+    # for total, chunk in forge.recommended.download(".", 102400):
+    #     print(f"{chunk}/{total}")
+    # print(forge.recommended.version)
+    print(ForgeVersion.all_minecraft_versions())

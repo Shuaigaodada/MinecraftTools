@@ -11,6 +11,26 @@ def get_resource_path(relative_path = None):
 
     return os.path.join(base_path, relative_path)
 
+def set_base(path):
+    global base
+    base = path
+
+def set_prefabs(path):
+    global prefabs
+    prefabs = path
+
+def set_server(path):
+    global server
+    server = path
+
+def set_configs(path):
+    global configs
+    configs = path
+
+def set_src(path):
+    global src
+    src = path
+
 base = get_resource_path(".")
 prefabs = get_resource_path("prefabs")
 server = get_resource_path("server")

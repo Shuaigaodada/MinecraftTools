@@ -5,3 +5,5 @@ bs4
 lxml
 loguru
 tqdm
+npyscreen
+wcwidth

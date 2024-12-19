@@ -22,7 +22,7 @@ class JDK:
         Args:
             minecraft_version: 我的世界版本
         """
-        logger.info(f"自动获取适合MC版本的JDK版本, 当前MC版本: {minecraft_version}")
+        # logger.info(f"自动获取适合MC版本的JDK版本, 当前MC版本: {minecraft_version}")
         vers = int(minecraft_version.split(".")[1])
         if vers < 17:
             self.version = "8"
@@ -49,7 +49,7 @@ class JDK:
             迭代器，每次返回下载进度[总大小, 本次下载大小]
         """
         if self.is_downloaded():
-            logger.info("JDK已下载")
+            # logger.info("JDK已下载")
             self.path = f"{path.server}/jdk-{self.version}"
             return
         url = self.url_mapping[self.version]["url"]
